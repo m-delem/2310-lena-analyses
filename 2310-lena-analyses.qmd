@@ -114,7 +114,8 @@ df <-
   read_excel(path, sheet = "Session 7", range = "B1:V142"),
   read_excel(path, sheet = "Session 8", range = "B1:V142"),
   read_excel(path, sheet = "Session 9", range = "B1:V142")
-) %>% 
+)
+
 ```
 
 :::
