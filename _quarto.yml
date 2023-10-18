@@ -1,0 +1,37 @@
+project:
+  title: "Kolodzienski study - Longitudinal Data Analysis report"
+
+author: "Maël Delem"
+date: 2023-10-18
+date-format: "D/MM/YYYY"
+date-modified: last-modified
+# table of contents
+toc: true
+toc-depth: 3
+toc-expand: 2
+number-sections: true
+number-depth: 2
+# code reading options
+echo: false
+warning: false
+error: false
+message: false
+# figure default options
+fig-width: 6
+fig-asp: .618
+fig-align: center
+fig-cap-location: bottom
+# captions
+cap-location: bottom
+tbl-cap-location: bottom
+
+# format specific
+format:
+  html:
+    theme: cosmo
+    code-fold: true
+
+# code writing
+editor_options: 
+  chunk_output_type: console
+

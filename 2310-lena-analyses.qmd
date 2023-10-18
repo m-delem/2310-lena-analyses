@@ -1,0 +1,176 @@
+
+<!-- CSS options for custom title numbers styling-->
+<style>
+.header-section-number:after {
+  content: ". ";
+}
+</style>
+
+### Preliminary Set-up {.unnumbered}
+
+::: {.callout-note collapse="true"}
+
+#### Datasets, code availability, software, setup
+
+##### Data
+
+The folder containing this HTML file also has a "`data/`" folder, wherein can be found the main Excel file from which the datasets analysed here are sourced, i.e. "`raw_data_lena.xlsx`". It has nine sheets, that will be merged into a single dataframe in the setup code below.
+
+##### Code availability and software
+
+The code generating all the computations, figures, tables, etc. (only partially exposed here for clarity) can be found in the `2310-lena-analyses.qmd` file, for which the best reading software are coding Integrated Development Environments (IDE) like [RStudio](https://posit.co/download/rstudio-desktop/) or [Visual Studio Code](https://code.visualstudio.com/). The file includes detailed commentaries along with the code to ease understanding, accessibility, and potential (welcome) criticism.
+
+This analysis was conducted in R language on [RStudio](https://posit.co/download/rstudio-desktop/). This analysis report was written with [Quarto](https://quarto.org/). 
+
+##### Setup
+
+Just down below is the set-up code, including two essential steps: 
+
+1. Installing the required packages for this data analysis
+
+2. importing data into the dataframes used throughout. 
+
+I left this (usually hidden) step here for reference of the tools used in a view of transparency for the interested reader.
+
+```{r setup}
+#| output: false
+#| echo: true
+#| code-summary: "Packages"
+
+# The package `librairian` will ease the package management with the "shelf" 
+# function, which automatically: 
+# 1) checks if a package is installed 
+# 2) installs it if need be
+# 3) loads the package like the "library()" function would.
+if (!require(librarian)) install.packages(librarian)
+library(librarian)
+
+# now putting packages on our library's shelves:
+shelf(
+  # --- essential package collections ---
+  tidyverse,      # modern R ecosystem
+  easystats,      # data analysis framework
+  tidymodels,     # modelling framework
+  
+  # --- tidymodels friends
+  # infer,          # inferential analyses
+  corrr,          # correlational analyses
+  # bayesian,       # bayesian modelling with brms
+  tidybayes,      # bayesian inference
+  multilevelmod,  # multilevel modelling with lmer and tidymodels
+  
+  # --- modelling
+  lme4,           # mixed models
+  # cluster,        # cluster analyses
+  # mclust,         # mixture clustering
+  # FactoMineR,     # multiple factor analysis
+  rstanarm,       # bayesian models
+  BayesFactor,    # BFs
+  
+  # --- data management
+  readxl,         # importing xlsx
+  openxlsx,       # exporting xlsx
+  # jsonlite,       # reading json
+  
+  # --- data visualization
+  # plot types and geoms
+  # factoextra,            # multivariate data plots
+  # ricardo-bion/ggradar,  # radar plots
+  ggbeeswarm,            # scatter violin plots
+  # layout and options
+  ggpubr,         # publication plots
+  patchwork,      # layout control
+  rstatix,        # ggplot stat tools
+  # palettes
+  ggsci,          # scientific palettes
+  viridis,        # colour-blind friendly palettes
+  # interactive
+  plotly,         # interactive plots
+)
+
+# --- Global cosmetic theme ---
+theme_set(theme_bw(base_size = 14))
+
+# --- Fixing a seed for reproducibility ---
+set.seed(89910514)
+```
+
+```{r importing_data}
+#| echo: true
+#| code-summary: "Importing data"
+
+path <- "data/raw_data_lena.xlsx"
+
+# The raw data being magnificently tidy from the get-go, we only need to stack
+# the successive dataframes on top of each other
+df <- 
+  bind_rows(
+  read_excel(path, sheet = "Session 1", range = "B1:V142"),
+  read_excel(path, sheet = "Session 2", range = "B1:V142"),
+  read_excel(path, sheet = "Session 3", range = "B1:V142"),
+  read_excel(path, sheet = "Session 4", range = "B1:V142"),
+  read_excel(path, sheet = "Session 5", range = "B1:V142"),
+  read_excel(path, sheet = "Session 6", range = "B1:V142"),
+  read_excel(path, sheet = "Session 7", range = "B1:V142"),
+  read_excel(path, sheet = "Session 8", range = "B1:V142"),
+  read_excel(path, sheet = "Session 9", range = "B1:V142")
+) %>% 
+```
+
+:::
+
+:::{.callout-tip appearance="simple"}
+
+#### Interactive figures
+
+Many figures in this report are interactive: hover over the plots to see some of the tools available. You can select a zone to zoom on a plot, hover over bars to see details about data, select only specific groups in the legend, among many other features.
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
