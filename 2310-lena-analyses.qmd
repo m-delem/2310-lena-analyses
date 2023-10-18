@@ -114,7 +114,26 @@ df <-
   read_excel(path, sheet = "Session 7", range = "B1:V142"),
   read_excel(path, sheet = "Session 8", range = "B1:V142"),
   read_excel(path, sheet = "Session 9", range = "B1:V142")
-)
+  ) %>% 
+  # removing irrelevant columns
+  select(-c(age_bis, genre))
+  rename(
+    group = "Groupe",
+    subject = "Pseudonyme",
+    birthdate = "date de naissance",
+    man = "genre_bis",
+    characters = "personnages",
+    story = "histoire",
+    intruder = "intrus",
+    reco_misses = "Fausses-Reco",
+    fr_categ = "FR-Categ",
+    fr_no_categ = "FR-Non categ",
+    visual_wm = "mdt-visuo",
+    sam_valence = "SAM-Valence",
+    sam_intensity = "SAM-Intensity",
+    fr_categ = "FR-Categ",
+    fr_non_categ = "FR-Non categ",
+  )
 
 ```
 
