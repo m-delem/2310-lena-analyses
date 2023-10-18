@@ -14,7 +14,9 @@
 
 ##### Data
 
-The folder containing this HTML file also has a "`data/`" folder, wherein can be found the main Excel file from which the datasets analysed here are sourced, i.e. "`raw_data_lena.xlsx`". It has nine sheets, that will be merged into a single dataframe in the setup code below.
+The folder containing this HTML file also has a "`data/`" folder, wherein can be found the main Excel file from which the datasets analysed here are sourced, i.e. "`raw_data_lena.xlsx`". 
+
+<!-- The original first nine sheets have been merged into a single table and tidied in the setup code below: the resulting table has been exported in the tenth sheet. -->
 
 ##### Code availability and software
 
@@ -24,7 +26,7 @@ This analysis was conducted in R language on [RStudio](https://posit.co/download
 
 ##### Setup
 
-Just down below is the set-up code, including two essential steps: 
+Just down below is the setup code, including two essential steps: 
 
 1. Installing the required packages for this data analysis
 
@@ -53,29 +55,23 @@ shelf(
   tidymodels,     # modelling framework
   
   # --- tidymodels friends
-  # infer,          # inferential analyses
   corrr,          # correlational analyses
-  # bayesian,       # bayesian modelling with brms
   tidybayes,      # bayesian inference
   multilevelmod,  # multilevel modelling with lmer and tidymodels
   
   # --- modelling
   lme4,           # mixed models
-  # cluster,        # cluster analyses
-  # mclust,         # mixture clustering
-  # FactoMineR,     # multiple factor analysis
+  mclust,         # mixture clustering
   rstanarm,       # bayesian models
   BayesFactor,    # BFs
   
   # --- data management
   readxl,         # importing xlsx
   openxlsx,       # exporting xlsx
-  # jsonlite,       # reading json
   
   # --- data visualization
   # plot types and geoms
-  # factoextra,            # multivariate data plots
-  # ricardo-bion/ggradar,  # radar plots
+  ricardo-bion/ggradar,  # radar plots
   ggbeeswarm,            # scatter violin plots
   # layout and options
   ggpubr,         # publication plots
@@ -85,14 +81,12 @@ shelf(
   ggsci,          # scientific palettes
   viridis,        # colour-blind friendly palettes
   # interactive
-  plotly,         # interactive plots
+  plotly         # interactive plots
 )
 
-# --- Global cosmetic theme ---
-theme_set(theme_bw(base_size = 14))
+theme_set(theme_bw(base_size = 14)) # global ggplot theme
+set.seed(89910514) # fixing a seed for reproducibility
 
-# --- Fixing a seed for reproducibility ---
-set.seed(89910514)
 ```
 
 ```{r importing_data}
@@ -101,40 +95,61 @@ set.seed(89910514)
 
 path <- "data/raw_data_lena.xlsx"
 
+#_______________________________________________________________________________
+
 # The raw data being magnificently tidy from the get-go, we only need to stack
 # the successive dataframes on top of each other
-df <- 
+df <-
   bind_rows(
-  read_excel(path, sheet = "Session 1", range = "B1:V142"),
-  read_excel(path, sheet = "Session 2", range = "B1:V142"),
-  read_excel(path, sheet = "Session 3", range = "B1:V142"),
-  read_excel(path, sheet = "Session 4", range = "B1:V142"),
-  read_excel(path, sheet = "Session 5", range = "B1:V142"),
-  read_excel(path, sheet = "Session 6", range = "B1:V142"),
-  read_excel(path, sheet = "Session 7", range = "B1:V142"),
-  read_excel(path, sheet = "Session 8", range = "B1:V142"),
-  read_excel(path, sheet = "Session 9", range = "B1:V142")
-  ) %>% 
+    read_excel(path, sheet = "Session 1", range = "B1:V142"),
+    read_excel(path, sheet = "Session 2", range = "B1:V142"),
+    read_excel(path, sheet = "Session 3", range = "B1:V142"),
+    read_excel(path, sheet = "Session 4", range = "B1:V142"),
+    read_excel(path, sheet = "Session 5", range = "B1:V142"),
+    read_excel(path, sheet = "Session 6", range = "B1:V142"),
+    read_excel(path, sheet = "Session 7", range = "B1:V142"),
+    read_excel(path, sheet = "Session 8", range = "B1:V142"),
+    read_excel(path, sheet = "Session 9", range = "B1:V142")
+  ) |> 
   # removing irrelevant columns
-  select(-c(age_bis, genre))
+  select(-c(
+    "date de naissance", 
+    age,
+    age_bis, 
+    genre, 
+    personnages,
+    "FR-Categ",
+    "FR-Non categ"
+    )
+  ) |>  
   rename(
-    group = "Groupe",
-    subject = "Pseudonyme",
-    birthdate = "date de naissance",
-    man = "genre_bis",
-    characters = "personnages",
-    story = "histoire",
-    intruder = "intrus",
-    reco_misses = "Fausses-Reco",
-    fr_categ = "FR-Categ",
-    fr_no_categ = "FR-Non categ",
-    visual_wm = "mdt-visuo",
-    sam_valence = "SAM-Valence",
-    sam_intensity = "SAM-Intensity",
-    fr_categ = "FR-Categ",
-    fr_non_categ = "FR-Non categ",
-  )
-
+    group     = "Groupe",
+    subject   = "Pseudonyme",
+    man       = "genre_bis",
+    comprehension  = "histoire",
+    categorization = "intrus",
+    visuo_spatial = "puzzles",
+    reco          = "reconnaissance",
+    false_reco    = "Fausses-Reco",
+    vis_spa_wm    = "mdt-visuo",
+    attention     = "barrages",
+    sam_valence   = "SAM-Valence",
+    sam_intensity = "SAM-Intensité"
+  ) |>  
+  mutate(
+    # subject ids in lower case
+    subject = tolower(subject),
+    # group renaming
+    group = if_else(group == "Contrôle", "control", group)
+  ) |>  
+  mutate(across(c(group, subject, man:session), ~ as.factor(.x))) |> 
+  # filtering out missing evaluations
+  filter(
+    !is.na(comprehension) & 
+    !is.na(categorization) & 
+    !is.na(visuo_spatial)
+  ) |> 
+  fill(everything())
 ```
 
 :::
@@ -146,6 +161,14 @@ df <-
 Many figures in this report are interactive: hover over the plots to see some of the tools available. You can select a zone to zoom on a plot, hover over bars to see details about data, select only specific groups in the legend, among many other features.
 
 :::
+
+```{r}
+df |>
+  group_by(group) |> 
+  get_summary_stats() |> 
+  display()
+```
+
 
 
 
