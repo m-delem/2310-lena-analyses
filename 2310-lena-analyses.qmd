@@ -399,7 +399,7 @@ df_pca |>
 #| label: fig-pca_distributions
 #| fig-cap: "Distribution of the three components"
 #| fig-width: 12
-#| fig-height: 8
+#| fig-height: 6
 
 (df_pca |> 
   select(session, pca_reasoning:pca_wm) |> 
@@ -426,32 +426,827 @@ As expected from the PCA, the three components are now completely decorrelated (
 
 ## Examining trends
 
-Let's visualize our three variables across sessions for each children.
+Let's visualize our outcome variables across conditions for each children in the groups in @fig-comprehension_per_condition and all associated tabs.
 
 :::{.panel-tabset}
 
-#### Reasoning score
+#### Comprehension
 
-```{r plotly_pc1}
+```{r plot_comprehension}
+#| label: fig-comprehension_per_condition
+#| fig-cap: "Comprehension standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_comprehension <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(comprehension)
+  
+(
 df_pca |> 
-  select(subject, session, pca_reasoning) |> 
+  filter(group != "control" & condition != 0) |> 
   ggplot(aes(
-    x = session, 
-    y = pca_reasoning
-    )
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = comprehension
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$comprehension),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
   ) +
-  # geom_line(aes(group = subject)) +
-  geom_smooth(method = "loess", se = FALSE, linewidth = 2)
+  geom_line(
+    data = df_comprehension,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_comprehension,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(comprehension),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(comprehension),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Comprehension score (standardized)")
+) |> 
+  ggplotly()
 ```
+
+#### Categorization
+
+```{r plot_categorization}
+#| label: fig-categorization_per_condition
+#| fig-cap: "Categorization standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_categorization <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(categorization)
+  
+(
+df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  ggplot(aes(
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = categorization
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$categorization),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_categorization,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_categorization,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(categorization),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(categorization),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Categorization score (standardized)")
+) |> 
+  ggplotly()
+```
+
+#### Visuo-spatial test
+
+```{r plot_visuo_spatial}
+#| label: fig-visuo_spatial_per_condition
+#| fig-cap: "Visuo-spatial test standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_visuo_spatial <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(visuo_spatial)
+  
+(
+df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  ggplot(aes(
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = visuo_spatial
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$visuo_spatial),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_visuo_spatial,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_visuo_spatial,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(visuo_spatial),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(visuo_spatial),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Visuo-spatial test score (standardized)")
+) |> 
+  ggplotly()
+```
+
+
+#### Recognition
+
+```{r plot_recognition}
+#| label: fig-recognition_per_condition
+#| fig-cap: "Recognition test standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_reco <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(reco)
+  
+(
+df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  ggplot(aes(
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = reco
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$reco),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_reco,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_reco,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(reco),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(reco),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Recognition test score (standardized)")
+) |> 
+  ggplotly()
+```
+
 
 #### False recognition
 
-```{r plotly_pc2}
+```{r plot_false_reco}
+#| label: fig-false_reco_per_condition
+#| fig-cap: "False recognition test standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_false_reco <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(false_reco)
+  
+(
+df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  ggplot(aes(
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = false_reco
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$false_reco),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_false_reco,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_false_reco,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(false_reco),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(false_reco),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "False recognition test score (standardized)")
+) |> 
+  ggplotly()
 ```
 
-#### Working memory
 
-```{r plotly_pc3}
+
+#### Visuo-spatial WM
+
+```{r plot_visuo_spa_wm}
+#| label: fig-visuo_spa_wm_per_condition
+#| fig-cap: "Visuo-spatial working memory standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_vis_spa_wm <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(vis_spa_wm)
+  
+(
+df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  ggplot(aes(
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = reco
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$vis_spa_wm),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_vis_spa_wm,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_vis_spa_wm,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(vis_spa_wm),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(vis_spa_wm),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Visuo-spatial WM score (standardized)")
+) |> 
+  ggplotly()
+```
+
+
+
+#### Attention
+
+```{r plot_attention}
+#| label: fig-attention_per_condition
+#| fig-cap: "Attention standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_attention <-
+  df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  group_by(group, condition) |> 
+  get_summary_stats(attention)
+  
+(
+df_pca |> 
+  filter(group != "control" & condition != 0) |> 
+  ggplot(aes(
+    x = factor(condition, level = c("4", "3", "2", "1")),
+    y = attention
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$attention),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_attention,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_attention,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(attention),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control" & condition != 0) |> 
+      group_by(condition) |> 
+      get_summary_stats(attention),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Attention score (standardized)")
+) |> 
+  ggplotly()
+```
+
+
+
+
+#### Reasoning (PCA)
+
+```{r plot_pc1}
+#| label: fig-reasoning_per_condition
+#| fig-cap: "Reasoning standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_reasoning <-
+  df_pca |> 
+  filter(group != "control") |> 
+  group_by(group, condition) |> 
+  get_summary_stats(pca_reasoning)
+  
+(
+df_pca |> 
+  filter(group != "control") |> 
+  ggplot(aes(
+    x = factor(condition, level = c("0", "4", "3", "2", "1")),
+    y = pca_reasoning
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$pca_reasoning),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_reasoning,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_reasoning,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control") |> 
+      group_by(condition) |> 
+      get_summary_stats(pca_reasoning),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control") |> 
+      group_by(condition) |> 
+      get_summary_stats(pca_reasoning),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Reasoning score (standardized, PCA variable)")
+) |> 
+  ggplotly()
+```
+
+#### False recognition (PCA)
+
+```{r plot_pc2}
+#| label: fig-false_reco_pc2_per_condition
+#| fig-cap: "False recognition standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_pca_false_reco <-
+  df_pca |> 
+  filter(group != "control") |> 
+  group_by(group, condition) |> 
+  get_summary_stats(pca_false_reco)
+  
+(
+df_pca |> 
+  filter(group != "control") |> 
+  ggplot(aes(
+    x = factor(condition, level = c("0", "4", "3", "2", "1")),
+    y = pca_false_reco
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$pca_false_reco),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_pca_false_reco,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_pca_false_reco,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control") |> 
+      group_by(condition) |> 
+      get_summary_stats(pca_false_reco),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control") |> 
+      group_by(condition) |> 
+      get_summary_stats(pca_false_reco),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "False recognition score (standardized, PCA variable)")
+) |> 
+  ggplotly()
+```
+
+#### Working memory (PCA)
+
+```{r plot_pc3}
+#| label: fig-wm_per_condition
+#| fig-cap: "Working memory standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+
+df_wm <-
+  df_pca |> 
+  filter(group != "control") |> 
+  group_by(group, condition) |> 
+  get_summary_stats(pca_wm)
+  
+(
+df_pca |> 
+  filter(group != "control") |> 
+  ggplot(aes(
+    x = factor(condition, level = c("0", "4", "3", "2", "1")),
+    y = pca_wm
+  )) +
+  geom_hline(
+    yintercept = mean(df_pca$pca_wm),
+    linetype = 2
+    ) +
+  geom_beeswarm(aes(
+    group = group,
+    color = group
+    ),
+    alpha = .4
+  ) +
+  geom_line(
+    data = df_wm,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = 3
+  ) +
+  geom_point(
+    data = df_wm,
+    aes(
+      x = condition,
+      y = mean,
+      group = group,
+      color = group)
+  ) +
+  geom_pointrange(
+    data = df_pca |> 
+      filter(group != "control") |> 
+      group_by(condition) |> 
+      get_summary_stats(pca_wm),
+    aes(
+      x = condition,
+      y = mean,
+      ymin = mean - ci,
+      ymax = mean + ci
+      ),
+    color = "black",
+    size = 2
+  ) +
+  geom_line(
+    data = df_pca |> 
+      filter(group != "control") |> 
+      group_by(condition) |> 
+      get_summary_stats(pca_wm),
+    aes(
+      x = condition,
+      y = mean,
+      group = 1
+      ),
+    color = "black",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(-2,2)) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Condition", y = "Working memory score (standardized, PCA variable)")
+) |> 
+  ggplotly()
 ```
 
 :::
@@ -504,8 +1299,6 @@ Our analysis aims at answering the following question: do the outdoor activities
 #   ggplotly()
 ```
 
-
-
 ```{r ggplot_conditions}
 # (df |>
 #   group_by(session) |> 
@@ -546,27 +1339,27 @@ Our analysis aims at answering the following question: do the outdoor activities
 ```
 
 ```{r ggplot_vs_control}
-(df |>
-  group_by(session) |>
-  standardize(comprehension:attention) |>
-  ungroup() |>
-  mutate(
-    group_expe = if_else(group != "control", "expe", group)
-  ) |>
-  select(group, group_expe, everything()) |>
-  group_by(group_expe, session) |>
-  summarize(mean = mean(comprehension)) |>
-  ggplot(aes(
-    x = session,
-    y = mean,
-    group = group_expe,
-    color = group_expe)) +
-  geom_line() +
-  geom_point() +
-  geom_smooth(alpha = .1, level = .5, span = .85) +
-  scale_color_viridis_d()
-  ) |>
-  ggplotly()
+# (df |>
+#   group_by(session) |>
+#   standardize(comprehension:attention) |>
+#   ungroup() |>
+#   mutate(
+#     group_expe = if_else(group != "control", "expe", group)
+#   ) |>
+#   select(group, group_expe, everything()) |>
+#   group_by(group_expe, session) |>
+#   summarize(mean = mean(comprehension)) |>
+#   ggplot(aes(
+#     x = session,
+#     y = mean,
+#     group = group_expe,
+#     color = group_expe)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_smooth(alpha = .1, level = .5, span = .85) +
+#   scale_color_viridis_d()
+#   ) |>
+#   ggplotly()
 ```
 
 
