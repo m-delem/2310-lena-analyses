@@ -73,6 +73,7 @@ shelf(
   # plot types and geoms
   ricardo-bion/ggradar,  # radar plots
   ggbeeswarm,            # scatter violin plots
+  GGally,         # complex plots
   # layout and options
   ggpubr,         # publication plots
   patchwork,      # layout control
@@ -113,13 +114,14 @@ df <-
   ) |> 
   # removing irrelevant columns
   select(-c(
-    "date de naissance", 
-    age,
+    "date de naissance",
     age_bis, 
     genre, 
     personnages,
     "FR-Categ",
-    "FR-Non categ"
+    "FR-Non categ",
+    "SAM-Valence",
+    "SAM-Intensité"
     )
   ) |>  
   rename(
@@ -132,24 +134,30 @@ df <-
     reco          = "reconnaissance",
     false_reco    = "Fausses-Reco",
     vis_spa_wm    = "mdt-visuo",
-    attention     = "barrages",
-    sam_valence   = "SAM-Valence",
-    sam_intensity = "SAM-Intensité"
+    attention     = "barrages"
   ) |>  
   mutate(
     # subject ids in lower case
     subject = tolower(subject),
     # group renaming
-    group = if_else(group == "Contrôle", "control", group)
+    group = if_else(group == "Contrôle", "control", group),
+    # false_reco is reverse-coded
+    false_reco = 20 - false_reco
   ) |>  
   mutate(across(c(group, subject, man:session), ~ as.factor(.x))) |> 
   # filtering out missing evaluations
   filter(
+    !is.na(age) &
     !is.na(comprehension) & 
     !is.na(categorization) & 
     !is.na(visuo_spatial)
   ) |> 
   fill(everything())
+```
+
+```{r na_check}
+# NA check
+# df |> summarise(across(everything(), ~sum(is.na(.x))))
 ```
 
 :::
@@ -162,11 +170,356 @@ Many figures in this report are interactive: hover over the plots to see some of
 
 :::
 
+# Exploratory Data Analysis
+
+The study was conducted on 141 second grade children scattered in five very similar schools from the same district: they were therefore divided into five groups approximately following this distribution. They followed a training curriculum consisting of four different learning modalities, each repeated twice in the year.
+
 ```{r}
+#| label: tbl-group_repartition
+#| tbl-cap: "Number of children in each experimental group."
+
 df |>
-  group_by(group) |> 
-  get_summary_stats() |> 
+  group_by(group, subject) |> 
+  summarise() |> 
+  count() |> 
+  ungroup() |> 
+  rename(
+    N = n,
+    Group = group
+  ) |>
+  mutate(Group = ifelse(Group == "control", "Control", Group)) |> 
   display()
+```
+
+A distinctive feature of the study's tests is that they were modified over time to adapt to children's progression and avoid ceiling effects. Therefore, an analysis of raw scores would lead to *negative* differences between sessions, that could be interpreted as a regression of the student. These difficulty variations make it useless to compare raw scores between sessions and conditions. To assess the level of the students, We will therefore center the scores for each test on the average level of all children across groups ***per session***: the score of a student to a given test in a given session will therefore be evaluated only *relatively* to the score of other students. Thus, each outcome variable in each session will have a mean of 0. 
+
+```{r standardizing}
+#| echo: true
+#| code-summary: Standardizing per session
+
+df_norm <- 
+  df |>
+  group_by(session) |> 
+  mutate(across(comprehension:attention, ~as.numeric(scale(.x))))
+```
+
+Let's see the distributions and correlations between our various **outcomes**. The results of the Bayesian correlations between the variables are displayed in @fig-cor_matrix.
+
+:::{.panel-tabset}
+
+
+#### Correlation between scores
+
+```{r correlations}
+#| label: fig-cor_matrix
+#| fig-cap: "Correlation between the main outcomes of the study. The stars indicate the amount of evidence in favour of a correlation, as assessed by the $BF_{10}$: No star = Anecdotal evidence, * = Weak evidence, ** = Moderate evidence, *** = Extreme evidence."
+#| fig-width: 10
+#| fig-height: 7
+
+df_norm |>
+  ungroup() |> 
+  select(comprehension:attention) |> 
+  correlation(
+    bayesian = TRUE,
+    bayesian_test = "bf"
+  ) |> 
+  summary() |> 
+  plot() + 
+  scale_fill_viridis(
+    option = "D",
+    # guide = NULL,
+    alpha = .6,
+    direction = 1,
+    limits = c(-.3,.3)
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 14)
+    )
+```
+
+#### Distribution of the scores
+
+```{r distributions}
+#| label: fig-distributions
+#| fig-cap: "Distribution of the seven outcomes of the study"
+#| fig-width: 10
+#| fig-height: 8
+
+(df_norm |> 
+  select(session, comprehension:attention) |> 
+  pivot_longer(cols = comprehension:attention) |> 
+  ggplot(aes(x = value, color = session, fill = session)) +
+  geom_density(alpha = .4) +
+  scale_color_viridis_d(name = "Session") +
+  scale_fill_viridis_d(name  = "Session") +
+  labs(x = "Score", y = "Density") 
+  ) |> 
+  facet(
+    facet.by = "name",
+    panel.labs = list(name = c(
+      "Attention",
+      "Categorization",
+      "Comprehension",
+      "False recognition",
+      "Recognition",
+      "Visuo-spatial WM",
+      "Visuo-spatial test"))
+    )
+```
+
+:::
+
+As we can see, several scores are significantly correlated (although with modest effect sizes), including some of the main tests, namely *comprehension*, *categorization* and *recognition* - among others. This suggests that, beyond their specificities, these tests might reflect common (cognitive) characteristics of the participants, e.g. in this case supposedly a "general ability level" of the child. To materialize this "general" variable, we will run a **Principal Component Analysis** and see if the different scores could be "merged" into a single variable (a "component", in PCA terms). The resulting components of this PCA are displayed in @fig-loadings and @tbl-eigenvalues.
+
+### Principal Component Analysis {#sec-pca}
+
+```{r pca}
+#| code-summary: "Computing the PCA"
+#| echo: true
+
+# --- Principal Component Analysis ---
+pca <- 
+  principal_components(
+    df_norm[,7:13],
+    n = "max",
+    sort = TRUE,
+    standardize = TRUE
+    ) 
+```
+
+:::{.panel-tabset}
+
+#### PCA loadings
+
+```{r loadings}
+#| label: fig-loadings
+#| fig-cap: "Loadings of each variable on the six components extracted by a PCA."
+#| fig-width: 9
+#| fig-height: 7
+
+# --- Loadings ---
+pca %>% plot + 
+  # scale_y_discrete(labels = c("OSIQ-S", "OSIQ-O", "VVIQ", "SUIS")) +
+  scale_fill_viridis(alpha = .6) +
+  labs(title = NULL) +
+  theme(text = element_text(size = 14))
+```
+
+#### Eigenvalues / variance explained
+
+```{r eigenvalues}
+#| label: tbl-eigenvalues
+#| tbl-cap: "Eigenvalues and variance explained by the three components extracted by a PCA."
+
+# --- Eigenvalues and variance ---
+pca %>% 
+  summary %>% 
+  rename(
+    "Component 1" = PC1,
+    "Component 2" = PC2,
+    "Component 3" = PC3,
+    "Component 4" = PC4,
+    "Component 5" = PC5,
+    "Component 6" = PC6,
+  ) %>%
+  format(digits = 2) %>% 
+  display
+```
+
+:::
+
+As seen in @fig-cor_matrix, *comprehension*, *recognition*, *categorization* and *visuo-spatial test* scores are tightly correlated: the PCA therefore aligned the **first component PC1** on these four variables, as shown by the coefficients of PC1 in @fig-loadings. We could interpret this first "concatenated" variable as "***reasoning***", to use a broad term at the intersection of the four tests. PC1 will be reversed to correlate positively with the four variables and ease interpretability. The **second component PC2** is highly correlated with *false recognition scores*, which indeed correlate very weakly with the other variables. Thus, PC2 aligns with this score to capture the variability brought by it. We'll keep it named "***false recognition***", although the variable deviated a bit. The **third component PC3** is correlated with *visuo-spatial working memory*, *attention*, and *false recognition*. It can be noted that, besides false recognition, this correlation (and subsequent component) between visuo-spatial WM and attention interestingly lines up with the **TBRS model**. Thus, PC3 will be named ***working memory***. 
+
+The number of PCA components to keep as meaningful to explain the data can be assessed with the Eigenvalues and the variance explained by each of the components: as a rule of thumb, an Eigenvalue very close or superior to 1 denotes a good PCA component. Therefore, in our case, only the first three components meet this criteria, as shown in @tbl-eigenvalues. These three components explain 56% of the total variance in the sample. Let's predict these new variables for each participant and add them to the data.
+
+```{r pca_components}
+#| code-summary: "Adding the predicted PCA components to the data"
+#| echo: true
+
+pca_components <- pca %>% predict
+
+df_pca <-
+  bind_cols(df_norm, pca_components[,1:3]) |> 
+  mutate(
+    PC1 = -c(scale(PC1)),
+    PC2 = c(scale(PC2)),
+    PC3 = c(scale(PC3))
+    ) |> 
+  rename(
+    "pca_reasoning"  = PC1,
+    "pca_false_reco" = PC2,
+    "pca_wm"         = PC3
+    )
+```
+
+Let's see how these components behave in @fig-pca_distributions and @fig-cor_pca.
+
+:::{.panel-tabset}
+
+#### Correlation between components and scores
+
+```{r cor_pca}
+#| label: fig-cor_pca
+#| fig-cap: "Correlation between the PCA components. The stars indicate the amount of evidence in favour of a correlation, as assessed by the $BF_{10}$: No star = Anecdotal evidence, * = Weak evidence, ** = Moderate evidence, *** = Extreme evidence."
+#| fig-width: 13
+#| fig-height: 7
+
+df_pca |>
+  ungroup() |> 
+  select(comprehension:pca_wm) |> 
+  correlation(
+    bayesian = TRUE,
+    bayesian_test = "bf"
+  ) |> 
+  summary() |> 
+  plot() + 
+  scale_fill_viridis(
+    option = "D",
+    # guide = NULL,
+    alpha = .6,
+    direction = 1,
+    limits = c(-.8,.8)
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 14)
+    )
+```
+
+#### Distribution of the components
+
+```{r pca_distributions}
+#| label: fig-pca_distributions
+#| fig-cap: "Distribution of the three components"
+#| fig-width: 12
+
+(df_pca |> 
+  select(session, pca_reasoning:pca_wm) |> 
+  pivot_longer(cols = pca_reasoning:pca_wm) |> 
+  ggplot(aes(x = value, color = session, fill = session)) +
+  geom_density(alpha = .4) +
+  scale_color_viridis_d(name = "Session") +
+  scale_fill_viridis_d(name = "Session") +
+  labs(x = "Score", y = "Density") 
+  ) |> 
+  facet(
+    facet.by = "name",
+    panel.labs = list(name = c(
+      "Reasoning",
+      "False recognition",
+      "Working memory"))
+    ) |> 
+  ggplotly()
+```
+
+:::
+
+As expected from the PCA, the three components are now completely decorrelated (bottom left corner of @fig-cor_pca) and show the relevant correlations with the initial scores mentioned above.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r ggplot_session_effect}
+# (df |> 
+#   ungroup() |> 
+#   group_by(subject, session) |> 
+#   summarize(mean = mean(reco)) |> 
+#   ungroup() |> 
+#   ggplot(aes(
+#     x = session, 
+#     y = mean,
+#     group = subject,
+#     color = subject
+#     )) +
+#   geom_line() +
+#   geom_point() +
+#   scale_color_viridis_d()
+#   ) |> 
+#   ggplotly()
+```
+
+
+
+```{r ggplot_conditions}
+# (df |>
+#   group_by(session) |> 
+#   standardize(comprehension:attention) |> 
+#   ungroup() |> 
+#   group_by(condition, session) |> 
+#   summarize(mean = mean(reco)) |>
+#   filter(condition != 0) |>
+#   ggplot(aes(
+#     x = session, 
+#     y = mean,
+#     group = condition,
+#     color = condition)) +
+#   geom_line() +
+#   geom_point() +
+#   scale_color_viridis_d()
+#   ) |> 
+#   ggplotly()
+```
+
+```{r ggplot_groups}
+# (df |>
+#   group_by(session) |> 
+#   standardize(comprehension:attention) |> 
+#   ungroup() |> 
+#   group_by(group, session) |> 
+#   summarize(mean = mean(reco)) |>
+#   ggplot(aes(
+#     x = session, 
+#     y = mean,
+#     group = group,
+#     color = group)) +
+#   geom_line() +
+#   geom_point() +
+#   scale_color_viridis_d()
+#   ) |> 
+#   ggplotly()
+```
+
+```{r ggplot_vs_control}
+# (df |>
+#   group_by(session) |> 
+#   standardize(comprehension:attention) |> 
+#   ungroup() |> 
+#   mutate(
+#     group_expe = if_else(group != "control", "expe", group)
+#   ) |> 
+#   select(group, group_expe, everything()) |> 
+#   group_by(group_expe, session) |> 
+#   summarize(mean = mean(comprehension)) |>
+#   ggplot(aes(
+#     x = session, 
+#     y = mean,
+#     group = group_expe,
+#     color = group_expe)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_smooth(alpha = .1, level = .5, span = .85) +
+#   scale_color_viridis_d()
+#   ) |> 
+#   ggplotly()
 ```
 
 
@@ -177,37 +530,39 @@ df |>
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+<!-- old code -->
+```{r recipe}
+#_______________________________________________________________________________
+# # Doesn't seem to work for some reason
+# recipe_model <-
+#   df_norm |>
+#   recipe() |>
+#   update_role(
+#     comprehension,
+#     categorization,
+#     visuo_spatial,
+#     reco,
+#     vis_spa_wm,
+#     attention,
+#     new_role = "outcome"
+#   ) |>
+#   update_role(
+#     session,
+#     condition,
+#     age,
+#     new_role = "predictor"
+#   ) |>
+#   update_role(
+#     subject,
+#     group,
+#     new_role = "group"
+#   ) |>
+#   step_BoxCox(comprehension)
+# 
+# recipe_model |>
+#   prep() |>
+#   bake(df_norm)
+```
 
 
 
