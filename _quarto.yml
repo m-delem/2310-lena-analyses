@@ -15,14 +15,8 @@ echo: false
 warning: false
 error: false
 message: false
-# figure default options
-fig-width: 6
-fig-asp: .618
-fig-align: center
-fig-cap-location: bottom
 # captions
 cap-location: bottom
-tbl-cap-location: bottom
 
 # format specific
 format:

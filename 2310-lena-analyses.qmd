@@ -145,18 +145,29 @@ df <-
     subject = tolower(subject),
     # group renaming
     group = if_else(group == "Contrôle", "control", group),
+    # creating a meta group for expe vs control
+    expe_group = ifelse(group != "control", "expe_group", group),
     # false_reco is reverse-coded
     false_reco = 20 - false_reco
   ) |>  
-  mutate(across(c(group, subject, man:session), ~ as.factor(.x))) |> 
+  mutate(across(c(
+    group, 
+    expe_group, 
+    subject, 
+    man:session), 
+    ~ as.factor(.x))
+  ) |> 
   # filtering out missing evaluations
   filter(
     !is.na(age) &
     !is.na(comprehension) & 
     !is.na(categorization) & 
     !is.na(visuo_spatial)
-  ) |> 
-  fill(everything())
+  ) |>
+  # filling the rare remaining NAs
+  fill(everything()) |> 
+  # reordering
+  select(group, expe_group, everything())
 ```
 
 ```{r na_check}
@@ -176,11 +187,12 @@ Many figures in this report are interactive: hover over the plots to see some of
 
 # Exploratory Data Analysis
 
-The study was conducted on 141 second grade children scattered in five very similar schools from the same district: they were therefore divided into five groups approximately following this distribution. They followed a training curriculum consisting of four different learning modalities, each repeated twice in the year.
+The study was conducted on 141 second grade children scattered in five very similar schools from the same district: they were therefore divided into five groups approximately following this distribution, as shown in @tbl-group_repartition. They followed a training curriculum consisting of four different learning modalities, each repeated twice in the year.
 
 ```{r}
 #| label: tbl-group_repartition
 #| tbl-cap: "Number of children in each experimental group."
+#| column: margin
 
 df |>
   group_by(group, subject) |> 
@@ -210,8 +222,6 @@ df_norm <-
 ## Correlations
 
 Let's see the distributions and correlations between our various **outcomes**. The results of the Bayesian correlations between the variables are displayed in @fig-cor_matrix and the distributions in @fig-distributions.
-
-:::{.panel-tabset}
 
 #### Correlation between scores
 
@@ -251,8 +261,7 @@ df_norm |>
 ```{r distributions}
 #| label: fig-distributions
 #| fig-cap: "Distribution of the seven main outcomes of the study."
-#| fig-width: 10
-#| fig-height: 8
+#| column: screen-inset
 
 (df_norm |> 
   select(session, comprehension:attention) |> 
@@ -265,6 +274,7 @@ df_norm |>
   ) |> 
   facet(
     facet.by = "name",
+    nrow = 1,
     panel.labs = list(name = c(
       "Attention",
       "Categorization",
@@ -275,8 +285,6 @@ df_norm |>
       "Visuo-spatial test"))
     )
 ```
-
-:::
 
 As we can see, several scores are significantly correlated (although with modest effect sizes), including some of the main tests, namely *comprehension*, *categorization* and *recognition* - among others. This suggests that, beyond their specificities, these tests might reflect common (cognitive) characteristics of the participants, e.g. in this case supposedly a "general ability level" of the child. To materialize this "general" variable, we will run a **Principal Component Analysis** and see if the different scores could be "merged" into a single variable (a "component", in PCA terms).
 
@@ -311,7 +319,7 @@ The resulting components of this PCA are displayed in @fig-loadings and @tbl-eig
 # --- Loadings ---
 pca |> 
   plot() + 
-  # scale_y_discrete(labels = c("OSIQ-S", "OSIQ-O", "VVIQ", "SUIS")) +
+  # facet_wrap(facets = vars(Component), nrow = 1) +
   scale_fill_viridis(alpha = .6) +
   labs(title = NULL) +
   theme(text = element_text(size = 14))
@@ -331,6 +339,29 @@ pca |>
 ```
 
 :::
+
+#### Testing layouts
+
+```{r pca_layout_test}
+#| label: fig-loadings_test
+#| fig-cap: "Loadings of each variable on the six components extracted by a PCA."
+#| fig-column: screen-inset-left
+#| tbl-column: margin
+
+# --- Loadings ---
+pca |> 
+  plot() + 
+  facet_wrap(facets = vars(Component), nrow = 1) +
+  scale_fill_viridis(alpha = .6) +
+  labs(title = NULL) +
+  theme(text = element_text(size = 14))
+
+# --- Eigenvalues and variance ---
+pca |> 
+  summary() |> 
+  format(digits = 2) |> 
+  display()
+```
 
 As seen in @fig-cor_matrix, *comprehension*, *recognition*, *categorization* and *visuo-spatial test* scores are tightly correlated: in turn, the PCA aligned the **first component PC1** on these four variables, as shown by the coefficients of PC1 in @fig-loadings. We could interpret this first "concatenated" variable as "***reasoning***", to use a broad term at the intersection of the four tests. PC1 will be reversed to correlate positively with the four variables and ease interpretability. The **second component PC2** is highly correlated with *false recognition scores*, which indeed correlate very weakly with the other variables (see @fig-cor_matrix). Thus, PC2 aligns with this score to capture the variability brought by it. We'll keep it named "***false recognition***", although the variable deviated a bit from the original one. The **third component PC3** is correlated with *visuo-spatial working memory*, *attention*, and *false recognition*. It can be noted that, besides false recognition, this correlation (and subsequent component) between visuo-spatial WM and attention interestingly lines up with the **TBRS model**. Thus, PC3 will be named ***working memory***. 
 
@@ -393,6 +424,8 @@ df_pca |>
     )
 ```
 
+:::
+
 #### Distribution of the components
 
 ```{r pca_distributions}
@@ -400,6 +433,7 @@ df_pca |>
 #| fig-cap: "Distribution of the three components"
 #| fig-width: 12
 #| fig-height: 6
+#| column: page
 
 (df_pca |> 
   select(session, pca_reasoning:pca_wm) |> 
@@ -419,8 +453,6 @@ df_pca |>
   ) |> 
   ggplotly()
 ```
-
-:::
 
 As expected from the PCA, the three components are now completely decorrelated (bottom left corner of @fig-cor_pca) and show the relevant correlations with the initial scores mentioned above. Most of the analyses that follow could be conducted on each outcome variable individually: for the sake of simplicity (the mischievous would say *parsimony*), we will model only these three components.
 
@@ -836,7 +868,6 @@ df_pca |>
 ) |> 
   ggplotly()
 ```
-
 
 
 #### Visuo-spatial WM
@@ -1263,104 +1294,6 @@ Our analysis aims at answering the following question: do the outdoor activities
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r ggplot_session_effect}
-# (df |> 
-#   ungroup() |> 
-#   group_by(subject, session) |> 
-#   summarize(mean = mean(reco)) |> 
-#   ungroup() |> 
-#   ggplot(aes(
-#     x = session, 
-#     y = mean,
-#     group = subject,
-#     color = subject
-#     )) +
-#   geom_line() +
-#   geom_point() +
-#   scale_color_viridis_d()
-#   ) |> 
-#   ggplotly()
-```
-
-```{r ggplot_conditions}
-# (df |>
-#   group_by(session) |> 
-#   standardize(comprehension:attention) |> 
-#   ungroup() |> 
-#   group_by(condition, session) |> 
-#   summarize(mean = mean(reco)) |>
-#   filter(condition != 0) |>
-#   ggplot(aes(
-#     x = session, 
-#     y = mean,
-#     group = condition,
-#     color = condition)) +
-#   geom_line() +
-#   geom_point() +
-#   scale_color_viridis_d()
-#   ) |> 
-#   ggplotly()
-```
-
-```{r ggplot_groups}
-# (df |>
-#   group_by(session) |> 
-#   standardize(comprehension:attention) |> 
-#   ungroup() |> 
-#   group_by(group, session) |> 
-#   summarize(mean = mean(reco)) |>
-#   ggplot(aes(
-#     x = session, 
-#     y = mean,
-#     group = group,
-#     color = group)) +
-#   geom_line() +
-#   geom_point() +
-#   scale_color_viridis_d()
-#   ) |> 
-#   ggplotly()
-```
-
-```{r ggplot_vs_control}
-# (df |>
-#   group_by(session) |>
-#   standardize(comprehension:attention) |>
-#   ungroup() |>
-#   mutate(
-#     group_expe = if_else(group != "control", "expe", group)
-#   ) |>
-#   select(group, group_expe, everything()) |>
-#   group_by(group_expe, session) |>
-#   summarize(mean = mean(comprehension)) |>
-#   ggplot(aes(
-#     x = session,
-#     y = mean,
-#     group = group_expe,
-#     color = group_expe)) +
-#   geom_line() +
-#   geom_point() +
-#   geom_smooth(alpha = .1, level = .5, span = .85) +
-#   scale_color_viridis_d()
-#   ) |>
-#   ggplotly()
-```
 
 
 
