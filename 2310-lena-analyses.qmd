@@ -187,7 +187,7 @@ Many figures in this report are interactive: hover over the plots to see some of
 
 # Exploratory Data Analysis
 
-The study was conducted on 141 second grade children scattered in five very similar schools from the same district: they were therefore divided into five groups approximately following this distribution, as shown in @tbl-group_repartition. They followed a training curriculum consisting of four different learning modalities, each repeated twice in the year.
+The study was conducted on 141 second grade children scattered in five very similar schools from the same district: they were divided into five groups approximately following this distribution, as shown in @tbl-group_repartition. They followed a training curriculum consisting of four different learning modalities, each repeated twice in the year across eight sessions + the first test (coded here as *session 1*).
 
 ```{r}
 #| label: tbl-group_repartition
@@ -207,7 +207,7 @@ df |>
   display()
 ```
 
-A distinctive feature of the study's tests is that they were modified over time to adapt to children's progression and avoid ceiling effects. Therefore, an analysis of raw scores would lead to *negative* differences between sessions, that could be interpreted as a regression of the student. These difficulty variations make it useless to compare raw scores between sessions and conditions. Consequently, to assess the level of the students, We will center the scores for each test on the average level of all children across groups ***per session***: the score of a student to a given test in a given session will thus be evaluated only *relatively* to the score of other students. In the end, each outcome variable in each session will have a mean of 0. 
+A distinctive feature of the study's tests is that they were modified over time to adapt to children's progression and avoid ceiling effects. Therefore, an analysis of raw scores could lead to *negative* differences between sessions (as tests are harder), that could be interpreted as a regression of the student. These difficulty variations make it useless to compare raw scores between sessions and conditions. Consequently, to assess the level of the children, We will center the scores for each test on the average level of all children across groups ***per session***: the score of a child to a given test in a given session will thus be evaluated only *relatively* to the score of other students. In the end, each outcome variable in each session will have a mean of 0 representing the average level in the whole sample at this point in time. 
 
 ```{r standardizing}
 #| echo: true
@@ -222,6 +222,8 @@ df_norm <-
 ## Correlations
 
 Let's see the distributions and correlations between our various **outcomes**. The results of the Bayesian correlations between the variables are displayed in @fig-cor_matrix and the distributions in @fig-distributions.
+
+:::{.panel-tabset .column-page-right}
 
 #### Correlation between scores
 
@@ -261,30 +263,34 @@ df_norm |>
 ```{r distributions}
 #| label: fig-distributions
 #| fig-cap: "Distribution of the seven main outcomes of the study."
-#| column: screen-inset
+#| fig-width: 10
+#| fig-height: 6
 
-(df_norm |> 
+# (
+df_norm |> 
   select(session, comprehension:attention) |> 
   pivot_longer(cols = comprehension:attention) |> 
   ggplot(aes(x = value, color = session, fill = session)) +
   geom_density(alpha = .4) +
   scale_color_viridis_d(name = "Session") +
   scale_fill_viridis_d(name  = "Session") +
-  labs(x = "Score", y = "Density") 
-  ) |> 
-  facet(
-    facet.by = "name",
-    nrow = 1,
-    panel.labs = list(name = c(
-      "Attention",
-      "Categorization",
-      "Comprehension",
-      "False recognition",
-      "Recognition",
-      "Visuo-spatial WM",
-      "Visuo-spatial test"))
+  labs(x = "Standardized score", y = "Density") +
+  facet_wrap(
+    facets = vars(name), 
+    nrow = 2,
+    labeller = labeller(name = c(
+      attention = "Attention",
+      categorization = "Categorization",
+      comprehension = "Comprehension",
+      false_reco = "False recognition",
+      reco = "Recognition",
+      vis_spa_wm = "Visuo-spatial WM",
+      visuo_spatial = "Visuo-spatial test"))
     )
+# ) |> ggplotly()
 ```
+
+:::
 
 As we can see, several scores are significantly correlated (although with modest effect sizes), including some of the main tests, namely *comprehension*, *categorization* and *recognition* - among others. This suggests that, beyond their specificities, these tests might reflect common (cognitive) characteristics of the participants, e.g. in this case supposedly a "general ability level" of the child. To materialize this "general" variable, we will run a **Principal Component Analysis** and see if the different scores could be "merged" into a single variable (a "component", in PCA terms).
 
@@ -297,7 +303,7 @@ As we can see, several scores are significantly correlated (although with modest
 # --- Principal Component Analysis ---
 pca <- 
   principal_components(
-    df_norm[,7:13],
+    df_norm[,8:14],
     n = "max",
     sort = TRUE,
     standardize = TRUE
@@ -306,64 +312,50 @@ pca <-
 
 The resulting components of this PCA are displayed in @fig-loadings and @tbl-eigenvalues.
 
-:::{.panel-tabset}
-
-#### PCA loadings
+:::{layout-nrow=1}
 
 ```{r loadings}
 #| label: fig-loadings
-#| fig-cap: "Loadings of each variable on the six components extracted by a PCA."
+#| fig-cap: "Loadings of each variable on the six components extracted by a PCA (i.e. correlations between components and variables)."
 #| fig-width: 9
-#| fig-height: 7
+#| fig-height: 6
 
 # --- Loadings ---
 pca |> 
   plot() + 
-  # facet_wrap(facets = vars(Component), nrow = 1) +
+  facet_wrap(facets = vars(Component), nrow = 2) +
   scale_fill_viridis(alpha = .6) +
   labs(title = NULL) +
   theme(text = element_text(size = 14))
 ```
 
-#### Eigenvalues / variance explained
+:::{.column-margin}
 
 ```{r eigenvalues}
 #| label: tbl-eigenvalues
 #| tbl-cap: "Eigenvalues and variance explained by the six components extracted by a PCA."
+#| column: margin
 
 # --- Eigenvalues and variance ---
 pca |> 
-  summary() |> 
-  format(digits = 2) |> 
+  summary() |>
+  pivot_longer(cols = -Parameter) |>
+  pivot_wider(names_from = Parameter) |>
+  rename("Component" = name) |>
   display()
 ```
 
 :::
 
-#### Testing layouts
+:::
 
-```{r pca_layout_test}
-#| label: fig-loadings_test
-#| fig-cap: "Loadings of each variable on the six components extracted by a PCA."
-#| fig-column: screen-inset-left
-#| tbl-column: margin
+The PCA can be interpreted as follows:
 
-# --- Loadings ---
-pca |> 
-  plot() + 
-  facet_wrap(facets = vars(Component), nrow = 1) +
-  scale_fill_viridis(alpha = .6) +
-  labs(title = NULL) +
-  theme(text = element_text(size = 14))
+- As seen in @fig-cor_matrix, *comprehension*, *recognition*, *categorization* and *visuo-spatial test* scores are tightly correlated: in turn, the PCA aligned the **first component PC1** on these four variables, as shown by the coefficients of PC1 in @fig-loadings. We could interpret this first "concatenated" variable as "***reasoning***", to use a broad term at the intersection of the four tests. PC1 will be reversed to correlate positively with the four variables and ease interpretability. 
 
-# --- Eigenvalues and variance ---
-pca |> 
-  summary() |> 
-  format(digits = 2) |> 
-  display()
-```
+- The **second component PC2** is highly correlated with *false recognition scores*, which indeed correlate very weakly with the other variables (see @fig-cor_matrix). Thus, PC2 aligns with this score to capture the variability brought by it. We'll keep it named "***false recognition***", although the variable deviated a bit from the original one. 
 
-As seen in @fig-cor_matrix, *comprehension*, *recognition*, *categorization* and *visuo-spatial test* scores are tightly correlated: in turn, the PCA aligned the **first component PC1** on these four variables, as shown by the coefficients of PC1 in @fig-loadings. We could interpret this first "concatenated" variable as "***reasoning***", to use a broad term at the intersection of the four tests. PC1 will be reversed to correlate positively with the four variables and ease interpretability. The **second component PC2** is highly correlated with *false recognition scores*, which indeed correlate very weakly with the other variables (see @fig-cor_matrix). Thus, PC2 aligns with this score to capture the variability brought by it. We'll keep it named "***false recognition***", although the variable deviated a bit from the original one. The **third component PC3** is correlated with *visuo-spatial working memory*, *attention*, and *false recognition*. It can be noted that, besides false recognition, this correlation (and subsequent component) between visuo-spatial WM and attention interestingly lines up with the **TBRS model**. Thus, PC3 will be named ***working memory***. 
+- The **third component PC3** is correlated with *visuo-spatial working memory*, *attention*, and *false recognition*. It can be noted that, besides false recognition, this correlation (and subsequent component) between visuo-spatial WM and attention interestingly lines up with the **TBRS model**. Thus, PC3 will be named ***working memory***. 
 
 The number of PCA components to keep as meaningful to explain the data can be assessed with the Eigenvalues and the variance explained by each of the components: as a rule of thumb, an Eigenvalue very close or superior to 1 denotes a good PCA component. In our case, only the first three components meet this criteria, as shown in @tbl-eigenvalues. These three components explain 56% of the total variance in the sample. Let's predict these new variables for each participant and add them to the data.
 
@@ -388,6 +380,8 @@ df_pca <-
 ```
 
 Let's see how these components behave in @fig-pca_distributions and @fig-cor_pca.
+
+:::{.column-page-right}
 
 :::{.panel-tabset}
 
@@ -415,7 +409,7 @@ df_pca |>
     # guide = NULL,
     alpha = .6,
     direction = 1,
-    limits = c(-.8,.8)
+    limits = c(-.8, .8)
   ) +
   theme_bw() +
   theme(
@@ -424,16 +418,13 @@ df_pca |>
     )
 ```
 
-:::
-
-#### Distribution of the components
+#### Distribution of the new PCA components
 
 ```{r pca_distributions}
 #| label: fig-pca_distributions
-#| fig-cap: "Distribution of the three components"
-#| fig-width: 12
-#| fig-height: 6
-#| column: page
+#| fig-cap: "Distribution of the three components extracted by the PCA."
+#| fig-width: 16
+#| fig-height: 8
 
 (df_pca |> 
   select(session, pca_reasoning:pca_wm) |> 
@@ -454,29 +445,36 @@ df_pca |>
   ggplotly()
 ```
 
-As expected from the PCA, the three components are now completely decorrelated (bottom left corner of @fig-cor_pca) and show the relevant correlations with the initial scores mentioned above. Most of the analyses that follow could be conducted on each outcome variable individually: for the sake of simplicity (the mischievous would say *parsimony*), we will model only these three components.
+:::
+
+:::
+
+As expected from the PCA, the three components are now completely decorrelated (bottom left corner of @fig-cor_pca) and show the relevant correlations with the initial scores mentioned above. The analyses that will follow could be conducted on each outcome variable individually or on the PCA components - thus assuming that they better represent the cognitive processes at play. Let's examine each individual outcome.
 
 ## Examining trends
 
-Let's visualize our outcome variables across conditions for each children in the groups in @fig-comprehension_per_condition and all associated tabs.
+### Conditions
 
-:::{.panel-tabset}
+One goal of the study was to show the impact of different training conditions on the progression of the children. The group division was created as a *counter-balancing* variable, to account for the effect of the order of the successive training conditions across weeks. Therefore, we do not have a data structure that allows us to study the effect of each individual condition on the outcomes *across time*^[We would have needed groups dedicated to a single condition, or every group with every condition at every session, which does not make sense in reality.], but only the effect of each condition **on the outcome of the next test**, i.e. the performance of the child directly after having been trained in one condition. Following this reasoning, the effect of the session on the condition differences is assumed to be controlled with the group repartition^[Although we could consider modelling them all together later. For this visualization, it still makes more sense to put the session factor aside.]. Let's visualize this effect on our outcome variables, across conditions and for each children in each experimental group, in @fig-comprehension_per_condition and all subsequent tabs.
+
+:::{.panel-tabset .column-page-right}
 
 #### Comprehension
 
 ```{r plot_comprehension}
 #| label: fig-comprehension_per_condition
-#| fig-cap: "Comprehension standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Comprehension standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_comprehension <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(comprehension)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = comprehension
@@ -510,9 +508,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(comprehension),
     aes(
       x = condition,
@@ -524,9 +522,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(comprehension),
     aes(
       x = condition,
@@ -539,25 +537,27 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Comprehension score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
+
 
 #### Categorization
 
 ```{r plot_categorization}
 #| label: fig-categorization_per_condition
-#| fig-cap: "Categorization standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Categorization standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_categorization <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(categorization)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = categorization
@@ -591,9 +591,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(categorization),
     aes(
       x = condition,
@@ -605,9 +605,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(categorization),
     aes(
       x = condition,
@@ -620,25 +620,27 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Categorization score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
+
 
 #### Visuo-spatial test
 
 ```{r plot_visuo_spatial}
 #| label: fig-visuo_spatial_per_condition
-#| fig-cap: "Visuo-spatial test standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Visuo-spatial test standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_visuo_spatial <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(visuo_spatial)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = visuo_spatial
@@ -672,9 +674,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(visuo_spatial),
     aes(
       x = condition,
@@ -686,9 +688,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(visuo_spatial),
     aes(
       x = condition,
@@ -701,7 +703,7 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Visuo-spatial test score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
 
@@ -710,17 +712,18 @@ df_pca |>
 
 ```{r plot_recognition}
 #| label: fig-recognition_per_condition
-#| fig-cap: "Recognition test standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Recognition test standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_reco <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(reco)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = reco
@@ -754,9 +757,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(reco),
     aes(
       x = condition,
@@ -768,9 +771,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(reco),
     aes(
       x = condition,
@@ -783,7 +786,7 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Recognition test score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
 
@@ -792,17 +795,18 @@ df_pca |>
 
 ```{r plot_false_reco}
 #| label: fig-false_reco_per_condition
-#| fig-cap: "False recognition test standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "False recognition test standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_false_reco <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(false_reco)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = false_reco
@@ -836,9 +840,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(false_reco),
     aes(
       x = condition,
@@ -850,9 +854,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(false_reco),
     aes(
       x = condition,
@@ -865,7 +869,7 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "False recognition test score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
 
@@ -874,17 +878,18 @@ df_pca |>
 
 ```{r plot_visuo_spa_wm}
 #| label: fig-visuo_spa_wm_per_condition
-#| fig-cap: "Visuo-spatial working memory standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Visuo-spatial working memory standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_vis_spa_wm <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(vis_spa_wm)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = reco
@@ -918,9 +923,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(vis_spa_wm),
     aes(
       x = condition,
@@ -932,9 +937,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(vis_spa_wm),
     aes(
       x = condition,
@@ -947,27 +952,27 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Visuo-spatial WM score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
-
 
 
 #### Attention
 
 ```{r plot_attention}
 #| label: fig-attention_per_condition
-#| fig-cap: "Attention standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Attention standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_attention <-
-  df_pca |> 
-  filter(group != "control" & condition != 0) |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(attention)
-  
+
 (
-df_pca |> 
-  filter(group != "control" & condition != 0) |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
     x = factor(condition, level = c("4", "3", "2", "1")),
     y = attention
@@ -1001,9 +1006,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(attention),
     aes(
       x = condition,
@@ -1015,9 +1020,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control" & condition != 0) |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(attention),
     aes(
       x = condition,
@@ -1030,30 +1035,29 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Attention score (standardized)")
-) |> 
+) |>
   ggplotly()
 ```
-
-
 
 
 #### Reasoning (PCA)
 
 ```{r plot_pc1}
 #| label: fig-reasoning_per_condition
-#| fig-cap: "Reasoning standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Reasoning standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_reasoning <-
-  df_pca |> 
-  filter(group != "control") |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(pca_reasoning)
-  
+
 (
-df_pca |> 
-  filter(group != "control") |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
-    x = factor(condition, level = c("0", "4", "3", "2", "1")),
+    x = factor(condition, level = c("4", "3", "2", "1")),
     y = pca_reasoning
   )) +
   geom_hline(
@@ -1085,9 +1089,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control") |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(pca_reasoning),
     aes(
       x = condition,
@@ -1099,9 +1103,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control") |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(pca_reasoning),
     aes(
       x = condition,
@@ -1114,27 +1118,29 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Reasoning score (standardized, PCA variable)")
-) |> 
+) |>
   ggplotly()
 ```
+
 
 #### False recognition (PCA)
 
 ```{r plot_pc2}
 #| label: fig-false_reco_pc2_per_condition
-#| fig-cap: "False recognition standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "False recognition standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_pca_false_reco <-
-  df_pca |> 
-  filter(group != "control") |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(pca_false_reco)
-  
+
 (
-df_pca |> 
-  filter(group != "control") |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
-    x = factor(condition, level = c("0", "4", "3", "2", "1")),
+    x = factor(condition, level = c("4", "3", "2", "1")),
     y = pca_false_reco
   )) +
   geom_hline(
@@ -1166,9 +1172,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control") |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(pca_false_reco),
     aes(
       x = condition,
@@ -1180,9 +1186,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control") |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(pca_false_reco),
     aes(
       x = condition,
@@ -1195,27 +1201,29 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "False recognition score (standardized, PCA variable)")
-) |> 
+) |>
   ggplotly()
 ```
+
 
 #### Working memory (PCA)
 
 ```{r plot_pc3}
 #| label: fig-wm_per_condition
-#| fig-cap: "Working memory standardized scores per condition and group. Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-cap: "Working memory standardized scores per condition and group. ***Feel free to click on the legend.*** Colored points and dotted lines represent group means for each condition. The black dotted line is the standardized mean for every condition, i.e. 0 after the centering. Black points and lines represent condition means along with 95% confidence intervals."
+#| fig-height: 7
 
 df_wm <-
-  df_pca |> 
-  filter(group != "control") |> 
-  group_by(group, condition) |> 
+  df_pca |>
+  filter(group != "control" & condition != 0) |>
+  group_by(group, condition) |>
   get_summary_stats(pca_wm)
-  
+
 (
-df_pca |> 
-  filter(group != "control") |> 
+df_pca |>
+  filter(group != "control" & condition != 0) |>
   ggplot(aes(
-    x = factor(condition, level = c("0", "4", "3", "2", "1")),
+    x = factor(condition, level = c("4", "3", "2", "1")),
     y = pca_wm
   )) +
   geom_hline(
@@ -1247,9 +1255,9 @@ df_pca |>
       color = group)
   ) +
   geom_pointrange(
-    data = df_pca |> 
-      filter(group != "control") |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(pca_wm),
     aes(
       x = condition,
@@ -1261,9 +1269,9 @@ df_pca |>
     size = 2
   ) +
   geom_line(
-    data = df_pca |> 
-      filter(group != "control") |> 
-      group_by(condition) |> 
+    data = df_pca |>
+      filter(group != "control" & condition != 0) |>
+      group_by(condition) |>
       get_summary_stats(pca_wm),
     aes(
       x = condition,
@@ -1276,8 +1284,778 @@ df_pca |>
   coord_cartesian(ylim = c(-2,2)) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Condition", y = "Working memory score (standardized, PCA variable)")
-) |> 
+) |>
   ggplotly()
+```
+
+:::
+
+The condition 1, with outdoor activities and sensorimotor training, appears to be associated with higher scores in *comprehension*, *categorization*, and the reasoning PCA variable - which is coherent considering that this variable is extracted mostly from the former two.
+
+### Groups and sessions
+
+The only way to study outcome differences *across time* - i.e. the progression of children across weeks - is to compare each group in each session, but also comparing experimental groups as a whole to the control group. This perspective for each outcome is in @fig-comprehension_per_session and subsequent tabs.
+
+:::{.panel-tabset .column-page-right}
+
+#### Comprehension
+
+```{r comprehension_session}
+#| label: fig-comprehension_per_session
+#| fig-cap: "Comprehension standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_comp_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(comprehension)
+
+df_comp_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(comprehension) |> 
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = comprehension,
+    group = group, 
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_comp_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_comp_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_comp_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Comprehension score (standardized)")
+) |> ggplotly()
+```
+
+#### Categorization
+
+```{r categorization_session}
+#| label: fig-categorization_per_session
+#| fig-cap: "Categorization standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_cat_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(categorization)
+
+df_cat_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(categorization) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = categorization,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_cat_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_cat_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_cat_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Categorization score (standardized)")
+) |> ggplotly()
+```
+
+#### Visuo-spatial test
+
+```{r visuo_spatial_session}
+#| label: fig-visuo_spatial_per_session
+#| fig-cap: "Visuo-spatial standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_visuo_spa_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(visuo_spatial)
+
+df_visuo_spa_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(visuo_spatial) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = visuo_spatial,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_visuo_spa_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_visuo_spa_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_visuo_spa_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Visuo-spatial test score (standardized)")
+) |> ggplotly()
+```
+
+#### Recognition
+
+```{r recognitiion_session}
+#| label: fig-recognition_per_session
+#| fig-cap: "Recognition standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_reco_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(reco)
+
+df_reco_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(reco) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = reco,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_reco_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_reco_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_reco_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Recognition score (standardized)")
+) |> ggplotly()
+```
+
+#### False recognition
+
+```{r false_reco_session}
+#| label: fig-false_reco_per_session
+#| fig-cap: "False recognition standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_false_reco_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(false_reco)
+
+df_false_reco_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(false_reco) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = false_reco,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_false_reco_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_false_reco_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_false_reco_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "False recognition score (standardized)")
+) |> ggplotly()
+```
+
+#### Visuo-spatial WM
+
+```{r vis_spa_wm_session}
+#| label: fig-vis_spa_wm_per_session
+#| fig-cap: "Visuo-spatial WM standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_vis_spa_wm_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(vis_spa_wm)
+
+df_vis_spa_wm_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(vis_spa_wm) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = vis_spa_wm,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_vis_spa_wm_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_vis_spa_wm_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_vis_spa_wm_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Visuo-spatial WM score (standardized)")
+) |> ggplotly()
+```
+
+#### Attention
+
+```{r attention_session}
+#| label: fig-attention_per_session
+#| fig-cap: "Attention standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_attention_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(attention)
+
+df_attention_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(attention) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = attention,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_attention_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_attention_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_attention_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Attention score (standardized)")
+) |> ggplotly()
+```
+
+#### Reasoning (PCA)
+
+```{r pca_reasoning_session}
+#| label: fig-pca_reasoning_per_session
+#| fig-cap: "Reasoning (PCA variable) standardized scores per group across sessions. Colored transparent solid lines connect the raw mean scores of each group at each session. ***Feel free to click on the legend.*** Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_pca_reasoning_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(pca_reasoning)
+
+df_pca_reasoning_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(pca_reasoning) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = pca_reasoning,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_pca_reasoning_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_pca_reasoning_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_pca_reasoning_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Reasoning score (standardized, PCA variable)")
+) |> ggplotly()
+```
+
+#### False recognition (PCA)
+
+```{r pca_false_reco_session}
+#| label: fig-pca_false_reco_per_session
+#| fig-cap: "False recognition (PCA variable) standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution. Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_pca_false_reco_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(pca_false_reco)
+
+df_pca_false_reco_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(pca_false_reco) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = pca_false_reco,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_pca_false_reco_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_pca_false_reco_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_pca_false_reco_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "False recognition score (standardized, PCA variable)")
+) |> ggplotly()
+```
+
+#### Working memory (PCA)
+
+```{r pca_wm_session}
+#| label: fig-pca_wm_per_session
+#| fig-cap: "Working memory (PCA variable) standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution. Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-height: 6
+
+df_pca_wm_per_session <-
+  df_pca |>
+  group_by(group, session) |>
+  get_summary_stats(pca_wm)
+
+df_pca_wm_expe_groups <-
+  df_pca |>
+  group_by(expe_group, session) |>
+  get_summary_stats(pca_wm) |>
+  mutate(session = as.numeric(session))
+
+(
+df_pca |>
+  ggplot(aes(
+    x = session,
+    y = pca_wm,
+    group = group,
+    color = group
+    )
+  ) +
+  geom_line(
+    data = df_pca_wm_per_session,
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+      ),
+    linetype = "solid",
+    linewidth = .5,
+    alpha = .15
+  ) +
+  geom_line(
+    data = df_pca_wm_per_session |> mutate(session = as.numeric(session)),
+    aes(
+      x = session,
+      y = mean,
+      group = group,
+      color = group
+    ),
+    stat = "smooth",
+    method = "loess",
+    span = 3,
+    alpha = .3,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  geom_smooth(
+    data = df_pca_wm_expe_groups,
+    aes(
+      x = session,
+      y = mean,
+      group = expe_group,
+      linetype = expe_group
+    ),
+    method = "lm",
+    level = .95,
+    se = FALSE,
+    color = "black",
+    alpha = .1,
+    linewidth = 1.3
+  ) +
+  coord_cartesian(ylim = c(-.5,.5)) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_color_viridis_d(name = "Group") +
+  labs(x = "Session", y = "Working memory score (standardized, PCA variable)")
+) |> ggplotly()
 ```
 
 :::
@@ -1288,19 +2066,13 @@ df_pca |>
 
 ### Research question and variables
 
-Our analysis aims at answering the following question: do the outdoor activities and sensory training improve the children's learning abilities?
+Our analysis aims at answering the following question: do the outdoor activities and sensory trainings improve the children's learning abilities?
+
+WIP - *We still have a bit more work to do to choose appropriate multilevel (aka mixed) model structures (fixed or random effects, etc.).*
 
 ### Potential models
 
-
-
-
-
-
-
-
-
-
+WIP - *Basically we will build the statistical models underlying the figures displayed above, and see if the effects we see here empirically are significant/large.*
 
 
 <!-- old code -->
@@ -1331,7 +2103,7 @@ Our analysis aims at answering the following question: do the outdoor activities
 #     new_role = "group"
 #   ) |>
 #   step_BoxCox(comprehension)
-# 
+#
 # recipe_model |>
 #   prep() |>
 #   bake(df_norm)
