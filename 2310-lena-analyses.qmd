@@ -223,7 +223,7 @@ df_norm <-
 
 Let's see the distributions and correlations between our various **outcomes**. The results of the Bayesian correlations between the variables are displayed in @fig-cor_matrix and the distributions in @fig-distributions.
 
-:::{.panel-tabset .column-page-right}
+:::{.panel-tabset .column-page-inset-right}
 
 #### Correlation between scores
 
@@ -381,7 +381,7 @@ df_pca <-
 
 Let's see how these components behave in @fig-pca_distributions and @fig-cor_pca.
 
-:::{.column-page-right}
+:::{.column-page-inset-right}
 
 :::{.panel-tabset}
 
@@ -457,7 +457,7 @@ As expected from the PCA, the three components are now completely decorrelated (
 
 One goal of the study was to show the impact of different training conditions on the progression of the children. The group division was created as a *counter-balancing* variable, to account for the effect of the order of the successive training conditions across weeks. Therefore, we do not have a data structure that allows us to study the effect of each individual condition on the outcomes *across time*^[We would have needed groups dedicated to a single condition, or every group with every condition at every session, which does not make sense in reality.], but only the effect of each condition **on the outcome of the next test**, i.e. the performance of the child directly after having been trained in one condition. Following this reasoning, the effect of the session on the condition differences is assumed to be controlled with the group repartition^[Although we could consider modelling them all together later. For this visualization, it still makes more sense to put the session factor aside.]. Let's visualize this effect on our outcome variables, across conditions and for each children in each experimental group, in @fig-comprehension_per_condition and all subsequent tabs.
 
-:::{.panel-tabset .column-page-right}
+:::{.panel-tabset .column-page-inset-right}
 
 #### Comprehension
 
@@ -1296,13 +1296,13 @@ The condition 1, with outdoor activities and sensorimotor training, appears to b
 
 The only way to study outcome differences *across time* - i.e. the progression of children across weeks - is to compare each group in each session, but also comparing experimental groups as a whole to the control group. This perspective for each outcome is in @fig-comprehension_per_session and subsequent tabs.
 
-:::{.panel-tabset .column-page-right}
+:::{.panel-tabset .column-page-inset-right}
 
 #### Comprehension
 
 ```{r comprehension_session}
 #| label: fig-comprehension_per_session
-#| fig-cap: "Comprehension standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Comprehension standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_comp_per_session <-
@@ -1368,7 +1368,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Comprehension score (standardized)")
 ) |> ggplotly()
@@ -1378,7 +1378,7 @@ df_pca |>
 
 ```{r categorization_session}
 #| label: fig-categorization_per_session
-#| fig-cap: "Categorization standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Categorization standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_cat_per_session <-
@@ -1444,7 +1444,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Categorization score (standardized)")
 ) |> ggplotly()
@@ -1454,7 +1454,7 @@ df_pca |>
 
 ```{r visuo_spatial_session}
 #| label: fig-visuo_spatial_per_session
-#| fig-cap: "Visuo-spatial standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Visuo-spatial standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_visuo_spa_per_session <-
@@ -1520,7 +1520,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Visuo-spatial test score (standardized)")
 ) |> ggplotly()
@@ -1530,7 +1530,7 @@ df_pca |>
 
 ```{r recognitiion_session}
 #| label: fig-recognition_per_session
-#| fig-cap: "Recognition standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Recognition standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_reco_per_session <-
@@ -1596,7 +1596,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Recognition score (standardized)")
 ) |> ggplotly()
@@ -1606,7 +1606,7 @@ df_pca |>
 
 ```{r false_reco_session}
 #| label: fig-false_reco_per_session
-#| fig-cap: "False recognition standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "False recognition standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_false_reco_per_session <-
@@ -1672,7 +1672,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "False recognition score (standardized)")
 ) |> ggplotly()
@@ -1682,7 +1682,7 @@ df_pca |>
 
 ```{r vis_spa_wm_session}
 #| label: fig-vis_spa_wm_per_session
-#| fig-cap: "Visuo-spatial WM standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Visuo-spatial WM standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_vis_spa_wm_per_session <-
@@ -1748,7 +1748,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Visuo-spatial WM score (standardized)")
 ) |> ggplotly()
@@ -1758,7 +1758,7 @@ df_pca |>
 
 ```{r attention_session}
 #| label: fig-attention_per_session
-#| fig-cap: "Attention standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Attention standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_attention_per_session <-
@@ -1824,7 +1824,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Attention score (standardized)")
 ) |> ggplotly()
@@ -1834,7 +1834,7 @@ df_pca |>
 
 ```{r pca_reasoning_session}
 #| label: fig-pca_reasoning_per_session
-#| fig-cap: "Reasoning (PCA variable) standardized scores per group across sessions. Colored transparent solid lines connect the raw mean scores of each group at each session. ***Feel free to click on the legend.*** Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Reasoning (PCA variable) standardized scores per group across sessions. Colored transparent solid lines connect the raw mean scores of each group at each session. ***Feel free to click on the legend.*** Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution.  Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_pca_reasoning_per_session <-
@@ -1900,7 +1900,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Reasoning score (standardized, PCA variable)")
 ) |> ggplotly()
@@ -1910,7 +1910,7 @@ df_pca |>
 
 ```{r pca_false_reco_session}
 #| label: fig-pca_false_reco_per_session
-#| fig-cap: "False recognition (PCA variable) standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution. Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "False recognition (PCA variable) standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution. Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_pca_false_reco_per_session <-
@@ -1976,7 +1976,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "False recognition score (standardized, PCA variable)")
 ) |> ggplotly()
@@ -1986,7 +1986,7 @@ df_pca |>
 
 ```{r pca_wm_session}
 #| label: fig-pca_wm_per_session
-#| fig-cap: "Working memory (PCA variable) standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution. Black dashed and dot-dashed lines represent linear regressions fit on the score for the four experimental groups gathered (dot-dashed line) or the control group (long-dashed line)."
+#| fig-cap: "Working memory (PCA variable) standardized scores per group across sessions. ***Feel free to click on the legend.*** Colored transparent solid lines connect the raw mean scores of each group at each session. Colored transparent dashed lines represent non-linear polynomial regressions fit on the score for each group, mainly to ease the vizualisation of the patterns of evolution. Black dashed and solid lines represent linear regressions fit on the score for the four experimental groups gathered (solid line) or the control group (long-dashed line)."
 #| fig-height: 6
 
 df_pca_wm_per_session <-
@@ -2052,7 +2052,7 @@ df_pca |>
     linewidth = 1.3
   ) +
   coord_cartesian(ylim = c(-.5,.5)) +
-  scale_linetype_manual(name = NULL,values = c("longdash", "dotdash")) +
+  scale_linetype_manual(name = NULL,values = c("longdash", "solid")) +
   scale_color_viridis_d(name = "Group") +
   labs(x = "Session", y = "Working memory score (standardized, PCA variable)")
 ) |> ggplotly()
