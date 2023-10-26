@@ -100,7 +100,6 @@ set.seed(89910514) # fixing a seed for reproducibility
 #| code-summary: "Importing data"
 
 path <- "data/raw_data_lena.xlsx"
-#_______________________________________________________________________________
 
 # The raw data being magnificently tidy from the get-go, we only need to stack
 # the successive dataframes on top of each other
