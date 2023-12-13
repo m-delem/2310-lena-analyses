@@ -1,0 +1,165 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+#| output: false
+#| echo: true
+#| code-summary: "Packages"
+
+# The package `librairian` will ease the package management with the "shelf" 
+# function, which automatically: 
+# 1) checks if a package is installed 
+# 2) installs it if need be
+# 3) loads the package like the "library()" function would.
+if (!require(librarian)) install.packages(librarian)
+library(librarian)
+
+# now putting packages on our library's shelves:
+shelf(
+  # --- essential package collections ---
+  tidyverse,      # modern R ecosystem
+  easystats,      # data analysis framework
+  tidymodels,     # modelling framework
+  
+  # --- tidymodels friends
+  corrr,          # correlational analyses
+  tidybayes,      # bayesian inference
+  multilevelmod,  # multilevel modelling with lmer and tidymodels
+  
+  # --- modelling
+  lme4,           # mixed models
+  mclust,         # mixture clustering
+  rstanarm,       # bayesian models
+  BayesFactor,    # BFs
+  
+  # --- data management
+  readxl,         # importing xlsx
+  openxlsx,       # exporting xlsx
+  
+  # --- data visualization
+  # plot types and geoms
+  ricardo-bion/ggradar,  # radar plots
+  ggbeeswarm,            # scatter violin plots
+  GGally,         # complex plots
+  # layout and options
+  ggpubr,         # publication plots
+  patchwork,      # layout control
+  rstatix,        # ggplot stat tools
+  # palettes
+  ggsci,          # scientific palettes
+  viridis,        # colour-blind friendly palettes
+  # interactive
+  plotly         # interactive plots
+)
+
+theme_set(theme_bw(base_size = 14)) # global ggplot theme
+set.seed(89910514) # fixing a seed for reproducibility
+
+```
+
+```{r importing_data}
+#| echo: true
+#| code-summary: "Importing data"
+
+# ---------- import data
+df <- 
+  read_excel("data/donnees-analysesR.xlsx") |> 
+  rename(id = `...1`) |> 
+  select(!c(
+    age,
+    "date de naissance",
+    Pseudonyme,
+    agebis,
+    genre,
+    genrebis,
+    "SAM-Valence",
+    "SAM-Intensité"
+  )) |>
+  rename(
+    group   = "Groupe",
+    group_expe = "GR",
+    presence = "présence",
+    outdoor  = "sorties",
+    sensorimotor   = "ss",
+    comprehension  = "histoire",
+    categorization = "intrus",
+    visuo_spatial  = "puzzles",
+    reco           = "reconnaissance",
+    false_reco     = "Fausses-Reco",
+    false_reco_non_categ = "FR- Non categ",
+    false_reco_categ     = "FR- Catég",
+    vis_spa_wm    = "mdt-visuo",
+    attention     = "barrages"
+  ) |>  
+  mutate(
+    # group renaming
+    group = if_else(group == "Contrôle", "control", group),
+    group_expe = if_else(group_expe == "GE", "expe", "control"),
+    outdoor = if_else(outdoor == "n", 0, 1),
+    sensorimotor = if_else(sensorimotor == "n", 0, 1),
+    presence = if_else(presence == "oui", 1, 0)
+  ) |> 
+  mutate(
+    across(c(
+      id, 
+      condition, 
+      outdoor, 
+      sensorimotor, 
+      session, 
+      presence
+      ),
+    as.factor
+    )
+  ) |> 
+  # filtering out missing evaluations
+  filter(
+    !is.na(comprehension) & 
+    !is.na(categorization)
+  ) |>
+  # filling the rare remaining NAs
+  fill(everything()) 
+```
+
+# Inferential analysis {#sec-inferential}
+
+## Model description
+
+### Research question and variables
+
+Our analysis aims at answering the following question: do the outdoor activities and sensory trainings improve the children's learning abilities?
+
+### Potential models
+
+```{r}
+
+# LMM
+model <- lmer(comprehension ~  outdoor * sensorimotor + (outdoor + sensorimotor| group/id), data = df)
+
+model |> model_parameters()
+
+ df |>
+  group_by(id) |> 
+  count() |> 
+  arrange(n)
+ 
+df |> 
+  select(comprehension:attention) |> 
+  pivot_longer(cols = comprehension:attention) |> 
+  ggplot(aes(x = value, group = name, fill = name)) +
+  geom_density(alpha = .6) +
+  facet_wrap(facets = "name", scales = "free") +
+  scale_fill_okabeito()
+```
+
+
+
+
+
+
+
+
+
+
